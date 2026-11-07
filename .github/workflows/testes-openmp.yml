@@ -1,0 +1,48 @@
+name: Testes OpenMP - Tasks e Sections
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  executar-testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Baixar os arquivos do repositorio
+        uses: actions/checkout@v4
+
+      - name: Identificar compilador e ambiente
+        run: |
+          gcc --version | head -n 1
+          python3 --version
+          nproc
+
+      - name: Compilar as seis versoes com OpenMP
+        run: make -C codigos
+
+      - name: Executar os testes com 1, 2 e 4 threads (3 repeticoes)
+        run: python3 codigos/executar_benchmark.py --threads 1,2,4 --repeticoes 3
+
+      - name: Exibir saidas completas dos testes com quatro threads
+        if: always()
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            echo "================= ATIVIDADE $i - INICIAL (4 THREADS) ================="
+            cat "logs/a${i}_inicial_t4_r1.txt" || true
+            echo "================= ATIVIDADE $i - MODIFICADA (4 THREADS) ==============="
+            cat "logs/a${i}_modificada_t4_r1.txt" || true
+          done
+
+      - name: Guardar registros e CSVs (artefatos)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openmp-logs-e-medicoes
+          path: |
+            logs/
+            dados/
+          if-no-files-found: warn
+          retention-days: 30
